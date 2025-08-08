@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SharePlate - Secure File Sharing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'brand-blue': '#3B82F6',
+                        'brand-blue-dark': '#1E40AF',
+                        'brand-green': '#10B981',
+                        'brand-green-dark': '#059669',
+                    }
+                }
+            }
+        };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="font-inter bg-slate-50 min-h-screen">
+    
+    <!-- @COMPONENT: NavigationHeader -->
+    <header class="bg-white shadow-sm border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-2xl font-bold text-brand-blue">SharePlate</h1>
+                    </div>
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-4">
+                            <span class="text-slate-600 text-sm">Secure file sharing made simple</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button data-mock="true" data-event="click:showRetrieve" class="text-slate-600 hover:text-brand-blue transition-colors px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-download mr-2"></i>Retrieve Files
+                    </button>
+                    <button data-mock="true" data-event="click:showAdmin" class="bg-brand-blue text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-blue-dark transition-colors">
+                        Admin
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: NavigationHeader -->
+
+    <!-- @COMPONENT: MainUploadSection -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- Upload Section -->
+        <div id="upload-section" class="text-center">
+            <div class="mb-8">
+                <h2 class="text-4xl font-bold text-slate-900 mb-4">Share Your Files Securely</h2>
+                <p class="text-xl text-slate-600 max-w-2xl mx-auto">Upload files up to 2GB each and share them instantly with a simple link or code. No registration required.</p>
+            </div>
+
+            <!-- Upload Zone -->
+            <div class="bg-white rounded-2xl shadow-xl p-8 border-2 border-dashed border-slate-300 hover:border-brand-blue transition-colors cursor-pointer" data-implementation="Implement drag & drop file upload">
+                <div class="text-center">
+                    <div class="mx-auto h-16 w-16 text-slate-400 mb-4">
+                        <i class="fas fa-cloud-upload-alt text-5xl"></i>
+                    </div>
+                    <div class="flex text-lg text-slate-600">
+                        <label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-brand-blue hover:text-brand-blue-dark">
+                            <span>Choose files to upload</span>
+                            <input id="file-upload" name="file-upload" type="file" class="sr-only" multiple data-implementation="Max 2GB per file validation">
+                        </label>
+                        <p class="pl-1">or drag and drop</p>
+                    </div>
+                    <p class="text-sm text-slate-500 mt-2">Maximum file size: 2GB each • Multiple files supported</p>
+                </div>
+            </div>
+
+            <!-- Upload Progress (hidden by default) -->
+            <div id="upload-progress" class="hidden bg-white rounded-xl shadow-lg p-6 mt-6" data-state="hidden">
+                <div class="space-y-4">
+                    <!-- @MAP: uploadingFiles.map(file => ( -->
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-lg" data-mock="true">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-file text-slate-400"></i>
+                            <div>
+                                <p class="font-medium text-slate-900" data-bind="file.name">document.pdf</p>
+                                <p class="text-sm text-slate-500" data-bind="file.size">2.4 MB</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-32 bg-slate-200 rounded-full h-2">
+                                <div class="bg-brand-blue h-2 rounded-full transition-all duration-300" style="width: 65%" data-bind="file.progress"></div>
+                            </div>
+                            <span class="text-sm font-medium text-slate-600" data-bind="file.progress">65%</span>
+                        </div>
+                    </div>
+                    <!-- @END_MAP )) -->
+                </div>
+            </div>
+
+            <!-- Upload Success -->
+            <div id="upload-success" class="hidden bg-white rounded-xl shadow-lg p-8 mt-6" data-state="hidden">
+                <div class="text-center mb-6">
+                    <div class="mx-auto h-16 w-16 text-brand-green mb-4">
+                        <i class="fas fa-check-circle text-5xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-slate-900 mb-2">Files Uploaded Successfully!</h3>
+                    <p class="text-slate-600">Your files are now ready to share</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Shareable Link -->
+                    <div class="bg-slate-50 rounded-lg p-6">
+                        <h4 class="font-semibold text-slate-900 mb-3 flex items-center">
+                            <i class="fas fa-link text-brand-blue mr-2"></i>
+                            Shareable Link
+                        </h4>
+                        <div class="flex items-center space-x-2">
+                            <input type="text" value="https://shareplate.com/d/abc123xyz" data-bind="shareLink" readonly class="flex-1 px-3 py-2 border border-slate-300 rounded-md bg-white text-sm font-mono" data-mock="true">
+                            <button class="px-3 py-2 bg-brand-blue text-white rounded-md hover:bg-brand-blue-dark transition-colors text-sm" data-event="click:copyLink">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 6-Character Code -->
+                    <div class="bg-slate-50 rounded-lg p-6">
+                        <h4 class="font-semibold text-slate-900 mb-3 flex items-center">
+                            <i class="fas fa-key text-brand-green mr-2"></i>
+                            Share Code
+                        </h4>
+                        <div class="flex items-center space-x-2">
+                            <input type="text" value="A3X9K2" data-bind="shareCode" readonly class="flex-1 px-3 py-2 border border-slate-300 rounded-md bg-white text-lg font-mono text-center tracking-widest" data-mock="true">
+                            <button class="px-3 py-2 bg-brand-green text-white rounded-md hover:bg-brand-green-dark transition-colors text-sm" data-event="click:copyCode">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2 text-center">Easy to share verbally or in text</p>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-6 border-t border-slate-200">
+                    <button class="bg-slate-100 text-slate-700 px-6 py-2 rounded-lg hover:bg-slate-200 transition-colors" data-event="click:uploadMore">
+                        <i class="fas fa-plus mr-2"></i>Upload More Files
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Retrieve Section (hidden by default) -->
+        <div id="retrieve-section" class="hidden" data-state="hidden">
+            <div class="text-center mb-8">
+                <h2 class="text-4xl font-bold text-slate-900 mb-4">Retrieve Your Files</h2>
+                <p class="text-xl text-slate-600">Enter a share link or 6-character code to access your files</p>
+            </div>
+
+            <div class="max-w-md mx-auto">
+                <div class="bg-white rounded-2xl shadow-xl p-8">
+                    <form class="space-y-6" data-implementation="Handle file retrieval">
+                        <div>
+                            <label for="retrieve-input" class="block text-sm font-medium text-slate-700 mb-2">
+                                Share Link or Code
+                            </label>
+                            <input 
+                                id="retrieve-input" 
+                                type="text" 
+                                placeholder="Paste link or enter 6-character code"
+                                class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                                data-mock="true"
+                            >
+                        </div>
+                        <button 
+                            type="submit" 
+                            class="w-full bg-brand-blue text-white py-3 px-4 rounded-lg hover:bg-brand-blue-dark transition-colors font-medium"
+                            data-event="click:retrieveFiles"
+                        >
+                            <i class="fas fa-search mr-2"></i>Retrieve Files
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Retrieved Files Display -->
+            <div id="retrieved-files" class="hidden mt-8" data-state="hidden">
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold text-slate-900 mb-4">Available Files</h3>
+                    <div class="space-y-3">
+                        <!-- @MAP: retrievedFiles.map(file => ( -->
+                        <div class="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors" data-mock="true">
+                            <div class="flex items-center space-x-3">
+                                <i class="fas fa-file text-slate-400 text-lg"></i>
+                                <div>
+                                    <p class="font-medium text-slate-900" data-bind="file.name">presentation.pptx</p>
+                                    <p class="text-sm text-slate-500" data-bind="file.size">5.2 MB • Uploaded 2 hours ago</p>
+                                </div>
+                            </div>
+                            <button class="bg-brand-green text-white px-4 py-2 rounded-lg hover:bg-brand-green-dark transition-colors text-sm" data-event="click:downloadFile" data-bind="file.id">
+                                <i class="fas fa-download mr-2"></i>Download
+                            </button>
+                        </div>
+                        <!-- @END_MAP )) -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Section (hidden by default) -->
+        <div id="admin-section" class="hidden" data-state="hidden">
+            <!-- Admin Login -->
+            <div id="admin-login" class="max-w-md mx-auto">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-slate-900">Admin Access</h2>
+                    <p class="text-slate-600 mt-2">Enter admin password to continue</p>
+                </div>
+                
+                <div class="bg-white rounded-2xl shadow-xl p-8">
+                    <form data-implementation="Validate password: samarkotwalishere">
+                        <div class="mb-6">
+                            <label for="admin-password" class="block text-sm font-medium text-slate-700 mb-2">Password</label>
+                            <input 
+                                id="admin-password" 
+                                type="password" 
+                                class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                                data-mock="true"
+                            >
+                        </div>
+                        <button 
+                            type="submit" 
+                            class="w-full bg-brand-blue text-white py-3 px-4 rounded-lg hover:bg-brand-blue-dark transition-colors font-medium"
+                            data-event="click:adminLogin"
+                        >
+                            Access Admin Panel
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Admin Dashboard (hidden by default) -->
+            <div id="admin-dashboard" class="hidden" data-state="hidden">
+                <div class="flex justify-between items-center mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-slate-900">Admin Dashboard</h2>
+                        <p class="text-slate-600 mt-1">Manage uploaded files and view statistics</p>
+                    </div>
+                    <button class="text-slate-600 hover:text-slate-800 transition-colors" data-event="click:adminLogout">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    </button>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-slate-600">Total Files</p>
+                                <p class="text-3xl font-bold text-slate-900" data-bind="stats.totalFiles" data-mock="true">1,247</p>
+                            </div>
+                            <div class="h-12 w-12 bg-brand-blue bg-opacity-10 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-file text-brand-blue text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-slate-600">Total Storage</p>
+                                <p class="text-3xl font-bold text-slate-900" data-bind="stats.totalStorage" data-mock="true">15.2 GB</p>
+                            </div>
+                            <div class="h-12 w-12 bg-brand-green bg-opacity-10 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-hdd text-brand-green text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-slate-600">Today's Uploads</p>
+                                <p class="text-3xl font-bold text-slate-900" data-bind="stats.todayUploads" data-mock="true">47</p>
+                            </div>
+                            <div class="h-12 w-12 bg-orange-500 bg-opacity-10 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-upload text-orange-500 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-slate-600">Active Links</p>
+                                <p class="text-3xl font-bold text-slate-900" data-bind="stats.activeLinks" data-mock="true">892</p>
+                            </div>
+                            <div class="h-12 w-12 bg-purple-500 bg-opacity-10 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-link text-purple-500 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Files Table -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-semibold text-slate-900">Uploaded Files</h3>
+                            <div class="flex space-x-2">
+                                <input 
+                                    type="text" 
+                                    placeholder="Search files..." 
+                                    class="px-3 py-2 border border-slate-300 rounded-md text-sm"
+                                    data-mock="true"
+                                >
+                                <button class="px-3 py-2 bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors text-sm">
+                                    <i class="fas fa-filter"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-200">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">File</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Share Code</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Share Link</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Size</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Uploaded</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-slate-200">
+                                <!-- @MAP: adminFiles.map(file => ( -->
+                                <tr class="hover:bg-slate-50" data-mock="true">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-file text-slate-400 mr-3"></i>
+                                            <div>
+                                                <div class="text-sm font-medium text-slate-900" data-bind="file.name">annual-report.pdf</div>
+                                                <div class="text-sm text-slate-500" data-bind="file.type">PDF Document</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-blue bg-opacity-10 text-brand-blue font-mono" data-bind="file.code">X7K9P2</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center space-x-2">
+                                            <span class="text-sm text-slate-500 font-mono truncate max-w-xs" data-bind="file.link">https://shareplate.com/d/x7k9p2abc</span>
+                                            <button class="text-slate-400 hover:text-slate-600 transition-colors" data-event="click:copyAdminLink">
+                                                <i class="fas fa-copy text-xs"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500" data-bind="file.size">2.4 MB</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500" data-bind="file.uploadDate">2 hours ago</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-2">
+                                            <button class="text-brand-blue hover:text-brand-blue-dark transition-colors" data-event="click:viewFile" data-bind="file.id">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-800 transition-colors" data-event="click:deleteFile" data-bind="file.id">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50" data-mock="true">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-image text-slate-400 mr-3"></i>
+                                            <div>
+                                                <div class="text-sm font-medium text-slate-900">conference-photos.zip</div>
+                                                <div class="text-sm text-slate-500">ZIP Archive</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-blue bg-opacity-10 text-brand-blue font-mono">M4N8R5</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center space-x-2">
+                                            <span class="text-sm text-slate-500 font-mono truncate max-w-xs">https://shareplate.com/d/m4n8r5def</span>
+                                            <button class="text-slate-400 hover:text-slate-600 transition-colors" data-event="click:copyAdminLink">
+                                                <i class="fas fa-copy text-xs"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">156 MB</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">5 hours ago</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-2">
+                                            <button class="text-brand-blue hover:text-brand-blue-dark transition-colors" data-event="click:viewFile">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="text-red-600 hover:text-red-800 transition-colors" data-event="click:deleteFile">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- @END_MAP )) -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div class="bg-white px-4 py-3 border-t border-slate-200 sm:px-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <p class="text-sm text-slate-700">
+                                    Showing <span class="font-medium">1</span> to <span class="font-medium">10</span> of <span class="font-medium">97</span> results
+                                </p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button class="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-600 hover:bg-slate-50 transition-colors">Previous</button>
+                                <button class="px-3 py-1 bg-brand-blue text-white rounded-md text-sm hover:bg-brand-blue-dark transition-colors">1</button>
+                                <button class="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-600 hover:bg-slate-50 transition-colors">2</button>
+                                <button class="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-600 hover:bg-slate-50 transition-colors">3</button>
+                                <button class="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-600 hover:bg-slate-50 transition-colors">Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <!-- @END_COMPONENT: MainUploadSection -->
+
+    <!-- @COMPONENT: Footer -->
+    <footer class="bg-white border-t border-slate-200 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="text-center">
+                <p class="text-slate-600 text-sm">
+                    <i class="fas fa-shield-alt text-brand-blue mr-2"></i>
+                    Files are securely stored and managed via Telegram Bot API
+                </p>
+                <p class="text-xs text-slate-400 mt-2">SharePlate - Secure file sharing platform</p>
+            </div>
+        </div>
+    </footer>
+    <!-- @END_COMPONENT: Footer -->
+
+    <!-- @FUNCTIONALITY: JavaScript for UI interactions and state management -->
+    <script>
+        (function() {
+            // TODO: Implement file upload functionality with Telegram bot integration
+            // TODO: Implement file retrieval system
+            // TODO: Implement admin authentication and file management
+            // TODO: Add real-time upload progress tracking
+            // TODO: Integrate with Telegram Bot API for file storage
+
+            // Demo navigation between sections
+            const uploadSection = document.getElementById('upload-section');
+            const retrieveSection = document.getElementById('retrieve-section');
+            const adminSection = document.getElementById('admin-section');
+            const adminLogin = document.getElementById('admin-login');
+            const adminDashboard = document.getElementById('admin-dashboard');
+
+            // Navigation handlers
+            document.querySelector('[data-event="click:showRetrieve"]').addEventListener('click', function() {
+                uploadSection.classList.add('hidden');
+                retrieveSection.classList.remove('hidden');
+                adminSection.classList.add('hidden');
+            });
+
+            document.querySelector('[data-event="click:showAdmin"]').addEventListener('click', function() {
+                uploadSection.classList.add('hidden');
+                retrieveSection.classList.add('hidden');
+                adminSection.classList.remove('hidden');
+                adminLogin.classList.remove('hidden');
+                adminDashboard.classList.add('hidden');
+            });
+
+            // Logo click to return home
+            document.querySelector('h1').addEventListener('click', function() {
+                uploadSection.classList.remove('hidden');
+                retrieveSection.classList.add('hidden');
+                adminSection.classList.add('hidden');
+            });
+
+            // Demo admin login
+            if (document.querySelector('[data-event="click:adminLogin"]')) {
+                document.querySelector('[data-event="click:adminLogin"]').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    // Demo: show dashboard (in real app, validate password)
+                    adminLogin.classList.add('hidden');
+                    adminDashboard.classList.remove('hidden');
+                });
+            }
+
+            // Demo copy functionality
+            document.querySelectorAll('[data-event*="copy"]').forEach(button => {
+                button.addEventListener('click', function() {
+                    // Demo feedback
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<i class="fas fa-check"></i>';
+                    this.classList.add('bg-brand-green', 'hover:bg-brand-green-dark');
+                    this.classList.remove('bg-brand-blue', 'hover:bg-brand-blue-dark');
+                    setTimeout(() => {
+                        this.innerHTML = originalText;
+                        this.classList.remove('bg-brand-green', 'hover:bg-brand-green-dark');
+                        this.classList.add('bg-brand-blue', 'hover:bg-brand-blue-dark');
+                    }, 1000);
+                });
+            });
+
+            // Demo file upload
+            document.getElementById('file-upload').addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    // Show upload progress
+                    document.getElementById('upload-progress').classList.remove('hidden');
+                    
+                    // Simulate upload progress
+                    setTimeout(() => {
+                        document.getElementById('upload-progress').classList.add('hidden');
+                        document.getElementById('upload-success').classList.remove('hidden');
+                    }, 3000);
+                }
+            });
+        })();
+    </script>
+
+</body>
+</html>

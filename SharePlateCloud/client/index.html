@@ -3,28 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>SharePlate</title>
     <style>
-      /* Center container in viewport */
-      body, html {
+      html, body {
+        margin: 0; 
+        padding: 0; 
         height: 100%;
-        margin: 0;
+        background: #f8fafc; /* subtle background */
+        display: flex;
+        justify-content: center; /* horizontal center */
+        align-items: center;    /* vertical center */
+        font-family: Arial, sans-serif;
       }
-      .ad-container {
+      #ads-wrapper {
         display: flex;
         flex-direction: column;
-        justify-content: center; /* vertical center */
-        align-items: center;     /* horizontal center */
-        height: 100vh;
-        gap: 20px; /* spacing between ads */
+        gap: 20px;
+      }
+      .ad-slot {
+        width: 160px;
+        height: 300px;
+        border: 1px solid #ddd;
+        background: white;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
       }
     </style>
   </head>
   <body>
     <div id="root"></div>
 
-    <div class="ad-container">
-      <!-- Repeat 4 times -->
-      <div class="ad-slot" style="width: 160px; height: 300px;">
+    <div id="ads-wrapper">
+      <div class="ad-slot">
         <script type="text/javascript">
           atOptions = {
             'key' : '42bfd3f75efbc9a532126d4b824a2be4',
@@ -37,20 +46,7 @@
         <script type="text/javascript" src="//www.highperformanceformat.com/42bfd3f75efbc9a532126d4b824a2be4/invoke.js"></script>
       </div>
 
-      <div class="ad-slot" style="width: 160px; height: 300px;">
-        <script type="text/javascript">
-          atOptions = {
-            'key' : '42bfd3f75efbc9a532126d4b824a2be4',  /* Ideally different keys */
-            'format' : 'iframe',
-            'height' : 300,
-            'width' : 160,
-            'params' : {}
-          };
-        </script>
-        <script type="text/javascript" src="//www.highperformanceformat.com/42bfd3f75efbc9a532126d4b824a2be4/invoke.js"></script>
-      </div>
-
-      <div class="ad-slot" style="width: 160px; height: 300px;">
+      <div class="ad-slot">
         <script type="text/javascript">
           atOptions = {
             'key' : '42bfd3f75efbc9a532126d4b824a2be4',
@@ -63,7 +59,20 @@
         <script type="text/javascript" src="//www.highperformanceformat.com/42bfd3f75efbc9a532126d4b824a2be4/invoke.js"></script>
       </div>
 
-      <div class="ad-slot" style="width: 160px; height: 300px;">
+      <div class="ad-slot">
+        <script type="text/javascript">
+          atOptions = {
+            'key' : '42bfd3f75efbc9a532126d4b824a2be4',
+            'format' : 'iframe',
+            'height' : 300,
+            'width' : 160,
+            'params' : {}
+          };
+        </script>
+        <script type="text/javascript" src="//www.highperformanceformat.com/42bfd3f75efbc9a532126d4b824a2be4/invoke.js"></script>
+      </div>
+
+      <div class="ad-slot">
         <script type="text/javascript">
           atOptions = {
             'key' : '42bfd3f75efbc9a532126d4b824a2be4',
@@ -78,6 +87,7 @@
     </div>
 
     <script type="module" src="/src/main.tsx"></script>
+
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
   </body>
 </html>

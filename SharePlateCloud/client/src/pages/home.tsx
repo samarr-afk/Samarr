@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Upload, Download, Shield } from "lucide-react";
+import { Download, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import UploadZone from "@/components/upload-zone";
 import FileRetrieve from "@/components/file-retrieve";
@@ -84,10 +84,7 @@ export default function Home() {
       <footer className="bg-white border-t border-slate-200 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <p className="text-slate-600 text-sm flex items-center justify-center">
-              <Shield className="h-4 w-4 text-brand-blue mr-2" />
-              Files are securely stored and managed via Telegram Bot API
-            </p>
+            {/* Removed the Telegram Bot API info */}
             <p className="text-xs text-slate-400 mt-2">
               SharePlate - Secure file sharing platform
             </p>

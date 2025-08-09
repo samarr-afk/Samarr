@@ -3,25 +3,81 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <style>
+      /* Center container in viewport */
+      body, html {
+        height: 100%;
+        margin: 0;
+      }
+      .ad-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: center; /* vertical center */
+        align-items: center;     /* horizontal center */
+        height: 100vh;
+        gap: 20px; /* spacing between ads */
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
 
-    <!-- Adestra banner ad script -->
-    <script type="text/javascript">
-      atOptions = {
-        'key' : '42bfd3f75efbc9a532126d4b824a2be4',
-        'format' : 'iframe',
-        'height' : 300,
-        'width' : 160,
-        'params' : {}
-      };
-    </script>
-    <script type="text/javascript" src="//www.highperformanceformat.com/42bfd3f75efbc9a532126d4b824a2be4/invoke.js"></script>
+    <div class="ad-container">
+      <!-- Repeat 4 times -->
+      <div class="ad-slot" style="width: 160px; height: 300px;">
+        <script type="text/javascript">
+          atOptions = {
+            'key' : '42bfd3f75efbc9a532126d4b824a2be4',
+            'format' : 'iframe',
+            'height' : 300,
+            'width' : 160,
+            'params' : {}
+          };
+        </script>
+        <script type="text/javascript" src="//www.highperformanceformat.com/42bfd3f75efbc9a532126d4b824a2be4/invoke.js"></script>
+      </div>
+
+      <div class="ad-slot" style="width: 160px; height: 300px;">
+        <script type="text/javascript">
+          atOptions = {
+            'key' : '42bfd3f75efbc9a532126d4b824a2be4',  /* Ideally different keys */
+            'format' : 'iframe',
+            'height' : 300,
+            'width' : 160,
+            'params' : {}
+          };
+        </script>
+        <script type="text/javascript" src="//www.highperformanceformat.com/42bfd3f75efbc9a532126d4b824a2be4/invoke.js"></script>
+      </div>
+
+      <div class="ad-slot" style="width: 160px; height: 300px;">
+        <script type="text/javascript">
+          atOptions = {
+            'key' : '42bfd3f75efbc9a532126d4b824a2be4',
+            'format' : 'iframe',
+            'height' : 300,
+            'width' : 160,
+            'params' : {}
+          };
+        </script>
+        <script type="text/javascript" src="//www.highperformanceformat.com/42bfd3f75efbc9a532126d4b824a2be4/invoke.js"></script>
+      </div>
+
+      <div class="ad-slot" style="width: 160px; height: 300px;">
+        <script type="text/javascript">
+          atOptions = {
+            'key' : '42bfd3f75efbc9a532126d4b824a2be4',
+            'format' : 'iframe',
+            'height' : 300,
+            'width' : 160,
+            'params' : {}
+          };
+        </script>
+        <script type="text/javascript" src="//www.highperformanceformat.com/42bfd3f75efbc9a532126d4b824a2be4/invoke.js"></script>
+      </div>
+    </div>
 
     <script type="module" src="/src/main.tsx"></script>
-
-    <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
   </body>
 </html>

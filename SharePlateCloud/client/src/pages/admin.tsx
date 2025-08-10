@@ -1,373 +1,142 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link } from "wouter";
-import { 
-  LogOut, 
-  Files, 
-  HardDrive, 
-  Upload, 
-  Link2, 
-  Eye, 
-  Trash2, 
-  Copy,
-  Search,
-  Filter
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { useEffect, useState } from "react";
+
+type Stats = {
+  totalFiles: number;
+  totalStorage: number;
+  todayUploads: number;
+  activeLinks: number;
+};
+
+type FileItem = {
+  id: string;
+  originalName: string;
+  fileSize: number;
+  mimeType: string;
+  uploadedAt: string;
+  telegramFileId?: string;
+  telegramMessageId?: number;
+};
 
 export default function Admin() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [files, setFiles] = useState<FileItem[]>([]);
   const [password, setPassword] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const { toast } = useToast();
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const loginMutation = useMutation({
-    mutationFn: async (password: string) => {
-      const response = await apiRequest("POST", "/api/admin/login", { password });
-      return response.json();
-    },
-    onSuccess: () => {
-      setIsAuthenticated(true);
-      toast({
-        title: "Login successful",
-        description: "Welcome to the admin panel",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Login failed",
-        description: "Invalid password",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const { data: stats } = useQuery({
-    queryKey: ["/api/admin/stats"],
-    enabled: isAuthenticated,
-  });
-
-  const { data: filesData } = useQuery({
-    queryKey: ["/api/admin/files"],
-    enabled: isAuthenticated,
-  });
-
-  const deleteFileMutation = useMutation({
-    mutationFn: async (fileId: string) => {
-      const response = await apiRequest("DELETE", `/api/admin/files/${fileId}`);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/files"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-      toast({
-        title: "File deleted",
-        description: "File has been successfully deleted",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Delete failed",
-        description: "Failed to delete file",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    loginMutation.mutate(password);
-  };
-
-  const handleCopyLink = async (link: string) => {
+  async function login() {
+    setError(null);
     try {
-      await navigator.clipboard.writeText(link);
-      toast({
-        title: "Copied to clipboard",
-        description: "Link has been copied to clipboard",
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
       });
-    } catch (error) {
-      toast({
-        title: "Copy failed",
-        description: "Failed to copy link to clipboard",
-        variant: "destructive",
-      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Login failed");
+      setLoggedIn(true);
+    } catch (e: any) {
+      setError(e.message);
     }
-  };
+  }
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+  useEffect(() => {
+    if (!loggedIn) return;
+    (async () => {
+      try {
+        const s = await fetch("/api/admin/stats").then((r) => r.json());
+        const f = await fetch("/api/admin/files").then((r) => r.json());
+        setStats(s);
+        setFiles(f.files || []);
+      } catch (e) {
+        setError("Failed to load admin data");
+      }
+    })();
+  }, [loggedIn]);
 
-  const formatTotalStorage = (bytes: number) => {
-    if (bytes === 0) return '0 GB';
-    const gb = bytes / (1024 * 1024 * 1024);
-    return gb.toFixed(1) + ' GB';
-  };
-
-  const filteredFiles = (filesData?.files || []).filter((file: any) =>
-    file.originalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    file.shareCode.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (!isAuthenticated) {
+  if (!loggedIn) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <Link href="/" className="text-2xl font-bold text-brand-blue hover:text-brand-blue-dark">
-              SharePlate
-            </Link>
-            <h2 className="text-3xl font-bold text-slate-900 mt-4">Admin Access</h2>
-            <p className="text-slate-600 mt-2">Enter admin password to continue</p>
-          </div>
-          
-          <Card>
-            <CardContent className="p-8">
-              <form onSubmit={handleLogin}>
-                <div className="mb-6">
-                  <label htmlFor="admin-password" className="block text-sm font-medium text-slate-700 mb-2">
-                    Password
-                  </label>
-                  <Input
-                    id="admin-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter admin password"
-                    className="w-full"
-                    required
-                  />
-                </div>
-                <Button 
-                  type="submit" 
-                  className="w-full bg-brand-blue hover:bg-brand-blue-dark"
-                  disabled={loginMutation.isPending}
-                >
-                  {loginMutation.isPending ? "Logging in..." : "Access Admin Panel"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="max-w-md mx-auto p-6">
+        <h1 className="text-2xl font-bold mb-4">Admin Login</h1>
+        <input
+          type="password"
+          className="border rounded px-3 py-2 w-full mb-3"
+          placeholder="Enter password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button
+          onClick={login}
+          className="bg-brand-blue text-white px-4 py-2 rounded"
+        >
+          Login
+        </button>
+        {error && <p className="text-red-600 mt-2">{error}</p>}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="text-2xl font-bold text-brand-blue hover:text-brand-blue-dark">
-              SharePlate
-            </Link>
-            <Button
-              variant="ghost"
-              onClick={() => setIsAuthenticated(false)}
-              className="text-slate-600 hover:text-slate-800"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
+    <div className="max-w-4xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
+      {error && <p className="text-red-600 mb-3">{error}</p>}
+      {stats ? (
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="p-4 border rounded">
+            <div className="text-slate-500">Total Files</div>
+            <div className="text-2xl font-semibold">{stats.totalFiles}</div>
+          </div>
+          <div className="p-4 border rounded">
+            <div className="text-slate-500">Total Storage (bytes)</div>
+            <div className="text-2xl font-semibold">{stats.totalStorage}</div>
+          </div>
+          <div className="p-4 border rounded">
+            <div className="text-slate-500">Today Uploads</div>
+            <div className="text-2xl font-semibold">{stats.todayUploads}</div>
+          </div>
+          <div className="p-4 border rounded">
+            <div className="text-slate-500">Active Links</div>
+            <div className="text-2xl font-semibold">{stats.activeLinks}</div>
           </div>
         </div>
-      </header>
+      ) : (
+        <p className="text-slate-500 mb-6">Loading stats…</p>
+      )}
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-3xl font-bold text-slate-900">Admin Dashboard</h2>
-            <p className="text-slate-600 mt-1">Manage uploaded files and view statistics</p>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">Total Files</p>
-                  <p className="text-3xl font-bold text-slate-900">
-                    {stats?.totalFiles ?? 0}
-                  </p>
-                </div>
-                <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Files className="h-6 w-6 text-brand-blue" />
+      <h2 className="text-xl font-semibold mb-2">Files</h2>
+      <div className="border rounded">
+        {files.length === 0 ? (
+          <div className="p-4 text-slate-500">No files</div>
+        ) : (
+          files.map((f) => (
+            <div key={f.id} className="p-4 border-b last:border-b-0 flex justify-between">
+              <div>
+                <div className="font-medium">{f.originalName}</div>
+                <div className="text-xs text-slate-500">
+                  {f.mimeType} · {f.fileSize} bytes · {new Date(f.uploadedAt).toLocaleString()}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">Total Storage</p>
-                  <p className="text-3xl font-bold text-slate-900">
-                    {formatTotalStorage(stats?.totalStorage ?? 0)}
-                  </p>
-                </div>
-                <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <HardDrive className="h-6 w-6 text-brand-green" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">Today's Uploads</p>
-                  <p className="text-3xl font-bold text-slate-900">
-                    {stats?.todayUploads ?? 0}
-                  </p>
-                </div>
-                <div className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Upload className="h-6 w-6 text-orange-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">Active Links</p>
-                  <p className="text-3xl font-bold text-slate-900">
-                    {stats?.activeLinks ?? 0}
-                  </p>
-                </div>
-                <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Link2 className="h-6 w-6 text-purple-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Files Table */}
-        <Card>
-          <div className="p-6 border-b border-slate-200">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-slate-900">Uploaded Files</h3>
-              <div className="flex space-x-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search files..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-64"
-                  />
-                </div>
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4" />
-                </Button>
-              </div>
+              <button
+                className="text-red-600"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/admin/files/${f.id}`, { method: "DELETE" });
+                    if (!res.ok) {
+                      const d = await res.json().catch(() => ({}));
+                      throw new Error(d?.message || "Delete failed");
+                    }
+                    setFiles((prev) => prev.filter((x) => x.id !== f.id));
+                  } catch (e: any) {
+                    setError(e.message);
+                  }
+                }}
+              >
+                Delete
+              </button>
             </div>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>File</TableHead>
-                  <TableHead>Share Code</TableHead>
-                  <TableHead>Share Link</TableHead>
-                  <TableHead>Size</TableHead>
-                  <TableHead>Uploaded</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredFiles.map((file: any) => (
-                  <TableRow key={file.id}>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Files className="h-4 w-4 text-slate-400 mr-3" />
-                        <div>
-                          <div className="text-sm font-medium text-slate-900">
-                            {file.originalName}
-                          </div>
-                          <div className="text-sm text-slate-500">
-                            {file.mimeType}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="font-mono">
-                        {file.shareCode}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-slate-500 font-mono truncate max-w-xs">
-                          {file.shareLink}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyLink(file.shareLink)}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-slate-500">
-                      {formatFileSize(file.fileSize)}
-                    </TableCell>
-                    <TableCell className="text-sm text-slate-500">
-                      {new Date(file.uploadedAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyLink(file.shareLink)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteFileMutation.mutate(file.id)}
-                          disabled={deleteFileMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </Card>
-      </main>
+          ))
+        )}
+      </div>
     </div>
   );
 }

@@ -1,10 +1,12 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
+import { useMutation } from "@tanstack/react-query";
 import { CloudUpload } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import FileProgress from "./file-progress";
 import UploadSuccess from "./upload-success";
+import FileProgress from "./file-progress";
 
 interface UploadedFile {
   id: string;
@@ -20,66 +22,115 @@ export default function UploadZone() {
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const { toast } = useToast();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const invalidFiles = acceptedFiles.filter(file => file.size > 2 * 1024 * 1024 * 1024);
-    if (invalidFiles.length > 0) {
+  // For aborting upload progress simulation on unmount or new uploads
+  const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const uploadMutation = useMutation({
+    mutationFn: async (files: File[]) => {
+      const formData = new FormData();
+      files.forEach((file) => {
+        formData.append('files', file);
+      });
+
+      // Here, fetch without progress events; so simulate progress in UI
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Upload failed');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setUploadedFiles(data.files);
+      setUploadingFiles([]);
+      setUploadProgress({});
       toast({
-        title: "File too large",
-        description: "Some files exceed the 2GB limit",
+        title: "Upload successful",
+        description: `${data.files.length} file(s) uploaded successfully`,
+      });
+
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+      }
+    },
+    onError: (error) => {
+      setUploadingFiles([]);
+      setUploadProgress({});
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload files",
         variant: "destructive",
       });
-    }
 
-    const validFiles = acceptedFiles.filter(file => file.size <= 2 * 1024 * 1024 * 1024);
-    if (validFiles.length === 0) return;
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+      }
+    },
+  });
 
-    setUploadingFiles(validFiles);
-    setUploadedFiles([]);
-    setUploadProgress({});
-
-    validFiles.forEach(file => {
-      const formData = new FormData();
-      formData.append("files", file);
-
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", "/api/upload");
-
-      // Track progress
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percent = Math.round((event.loaded / event.total) * 100);
-          setUploadProgress(prev => ({ ...prev, [file.name]: percent }));
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status === 200) {
-          const res = JSON.parse(xhr.responseText);
-          setUploadedFiles(prev => [...prev, ...res.files]);
-          toast({
-            title: "Upload successful",
-            description: `${file.name} uploaded successfully`,
-          });
-        } else {
-          toast({
-            title: "Upload failed",
-            description: xhr.statusText || "Unknown error",
-            variant: "destructive",
-          });
-        }
-      };
-
-      xhr.onerror = () => {
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      // Filter invalid files (> 2GB)
+      const invalidFiles = acceptedFiles.filter(file => file.size > 2 * 1024 * 1024 * 1024);
+      if (invalidFiles.length > 0) {
         toast({
-          title: "Upload failed",
-          description: "Network error",
+          title: "File too large",
+          description: "Some files exceed the 2GB limit and were not uploaded",
           variant: "destructive",
         });
-      };
+      }
 
-      xhr.send(formData);
-    });
-  }, [toast]);
+      const validFiles = acceptedFiles.filter(file => file.size <= 2 * 1024 * 1024 * 1024);
+      if (validFiles.length === 0) return;
+
+      setUploadingFiles(validFiles);
+      setUploadedFiles([]);
+      setUploadProgress({});
+
+      // Simulate upload progress for better UX — since fetch API does not support progress events natively
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+
+      progressTimerRef.current = setInterval(() => {
+        setUploadProgress(prev => {
+          const newProgress: Record<string, number> = {...prev};
+          validFiles.forEach(file => {
+            const current = newProgress[file.name] || 0;
+            if (current < 95) {
+              // increase by random 5-10%
+              newProgress[file.name] = Math.min(current + 5 + Math.random() * 5, 95);
+            }
+          });
+          return newProgress;
+        });
+      }, 500);
+
+      uploadMutation.mutate(validFiles);
+
+      // Force progress to 100% after 20 seconds max (fallback)
+      setTimeout(() => {
+        if (progressTimerRef.current) {
+          clearInterval(progressTimerRef.current);
+          setUploadProgress(prev => {
+            const newProgress: Record<string, number> = {...prev};
+            validFiles.forEach(file => (newProgress[file.name] = 100));
+            return newProgress;
+          });
+        }
+      }, 20000);
+    },
+    [toast, uploadMutation]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    multiple: true,
+    maxSize: 2 * 1024 * 1024 * 1024,
+  });
 
   const handleUploadMore = () => {
     setUploadedFiles([]);
@@ -98,14 +149,31 @@ export default function UploadZone() {
   return (
     <Card className="border-2 border-dashed border-slate-300 hover:border-brand-blue transition-colors">
       <CardContent className="p-8">
-        <div {...useDropzone({ onDrop, multiple: true, maxSize: 2 * 1024 * 1024 * 1024 }).getRootProps()} className="text-center cursor-pointer">
-          <input {...useDropzone({ onDrop }).getInputProps()} />
+        <div
+          {...getRootProps()}
+          className={`text-center cursor-pointer select-none ${
+            isDragActive ? "bg-blue-50" : ""
+          }`}
+          style={{ userSelect: "none" }}
+        >
+          <input {...getInputProps()} />
           <div className="mx-auto h-16 w-16 text-slate-400 mb-4">
             <CloudUpload className="w-full h-full" />
           </div>
           <div className="flex justify-center text-lg text-slate-600">
-            <span className="font-medium text-brand-blue hover:text-brand-blue-dark">Choose files to upload</span>
-            <span className="ml-1">or drag and drop</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                // Open file dialog programmatically by clicking hidden input
+                e.stopPropagation();
+                // useRef is possible, but useDropzone provides open()
+                openFileDialog();
+              }}
+              className="font-medium text-brand-blue hover:text-brand-blue-dark underline"
+            >
+              Choose files to upload
+            </button>
+            <span className="ml-1"> or drag and drop</span>
           </div>
           <p className="text-sm text-slate-500 mt-2">
             Maximum file size: 2GB each • Multiple files supported
@@ -114,4 +182,10 @@ export default function UploadZone() {
       </CardContent>
     </Card>
   );
+
+  // open() method is exposed by useDropzone to open dialog programmatically
+  function openFileDialog() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (getInputProps().ref as any)?.current?.click();
+  }
 }

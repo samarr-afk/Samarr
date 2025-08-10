@@ -73,6 +73,52 @@ export default function Home() {
               <h2 className="text-4xl font-bold text-slate-900 mb-4">
                 Retrieve Your Files
               </h2>
+              <p className="text-xl text-slate-600">
+                Enter a share link or 6-character code to access your files
+              </p>
+            </div>
+            <FileRetrieve />
+          </div>
+        )}
+      </main>
+
+      <footer className="bg-white border-t border-slate-200 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <p className="text-xs text-slate-400 mt-2">
+              SharePlate - Secure file sharing platform
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {activeSection === "upload" ? (
+          <div className="text-center">
+            <div className="mb-8">
+              <h2 className="text-4xl font-bold text-slate-900 mb-4">
+                Share Your Files Securely
+              </h2>
+              <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+                Upload files up to 2GB each and share them instantly with a
+                simple link or code. No registration required.
+              </p>
+            </div>
+            <UploadZone />
+          </div>
+        ) : (
+          <div>
+            <div className="text-center mb-8">
+              <h2 className="text-4xl font-bold text-slate-900 mb-4">
+                Retrieve Your Files
+              </h2>
             <p className="text-xl text-slate-600">
                 Enter a share link or 6-character code to access your files
               </p>

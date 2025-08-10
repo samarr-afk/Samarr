@@ -5,12 +5,12 @@ import { useEffect, useRef, useState } from "react";
 
 interface FileProgressProps {
   files: File[];
-  progress: Record<string, number>;
+  progress: Record<string, number>; // progress percentage 0-100 per file by name
 }
 
 interface SpeedData {
   startTime: number;
-  lastLoaded: number;
+  lastUploadedBytes: number;
   speedMBps: number;
   timeRemaining: string;
 }
@@ -28,43 +28,60 @@ export default function FileProgress({ files, progress }: FileProgressProps) {
   };
 
   useEffect(() => {
-    files.forEach(file => {
+    files.forEach((file) => {
+      // Initialize tracking data for new files
       if (!speedInfo[file.name]) {
         fileSizesRef.current[file.name] = file.size;
-        setSpeedInfo(prev => ({
+        setSpeedInfo((prev) => ({
           ...prev,
           [file.name]: {
             startTime: Date.now(),
-            lastLoaded: 0,
+            lastUploadedBytes: 0,
             speedMBps: 0,
             timeRemaining: "--:--",
-          }
+          },
         }));
-      } else {
-        const totalSize = fileSizesRef.current[file.name] || file.size;
-        const uploadedPercent = progress[file.name] || 0;
-        const uploadedBytes = (uploadedPercent / 100) * totalSize;
-        const elapsedSeconds = (Date.now() - speedInfo[file.name].startTime) / 1000;
-        const speedMBps = uploadedBytes / (1024 * 1024) / elapsedSeconds;
+        return; // skip to next file, info just initialized
+      }
 
-        let timeRemaining = "--:--";
-        if (speedMBps > 0) {
-          const remainingBytes = totalSize - uploadedBytes;
-          const remainingSeconds = remainingBytes / (speedMBps * 1024 * 1024);
-          const minutes = Math.floor(remainingSeconds / 60);
-          const seconds = Math.floor(remainingSeconds % 60);
-          timeRemaining = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+      // Calculate upload speed and ETA
+      const totalSize = fileSizesRef.current[file.name] || file.size;
+      const uploadedPercent = progress[file.name] || 0;
+      const uploadedBytes = (uploadedPercent / 100) * totalSize;
+      const now = Date.now();
+      const elapsedSeconds = (now - speedInfo[file.name].startTime) / 1000;
+
+      // Calculate speed MB/s
+      const speedMBps = elapsedSeconds > 0 ? uploadedBytes / (1024 * 1024) / elapsedSeconds : 0;
+
+      // Calculate ETA
+      let timeRemaining = "--:--";
+      if (speedMBps > 0) {
+        const remainingBytes = totalSize - uploadedBytes;
+        const remainingSeconds = remainingBytes / (speedMBps * 1024 * 1024);
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = Math.floor(remainingSeconds % 60);
+        timeRemaining = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+      }
+
+      // Update state only if values changed to avoid excess re-renders
+      setSpeedInfo((prev) => {
+        const prevInfo = prev[file.name];
+        if (
+          prevInfo.speedMBps.toFixed(2) === speedMBps.toFixed(2) &&
+          prevInfo.timeRemaining === timeRemaining
+        ) {
+          return prev;
         }
-
-        setSpeedInfo(prev => ({
+        return {
           ...prev,
           [file.name]: {
-            ...prev[file.name],
+            ...prevInfo,
             speedMBps,
-            timeRemaining
-          }
-        }));
-      }
+            timeRemaining,
+          },
+        };
+      });
     });
   }, [progress, files]);
 
@@ -81,12 +98,9 @@ export default function FileProgress({ files, progress }: FileProgressProps) {
                 <Files className="h-5 w-5 text-slate-400" />
                 <div>
                   <p className="font-medium text-slate-900">{file.name}</p>
-                  <p className="text-sm text-slate-500">
-                    {formatFileSize(file.size)}
-                  </p>
+                  <p className="text-sm text-slate-500">{formatFileSize(file.size)}</p>
                   <p className="text-xs text-slate-400">
-                    {speedInfo[file.name]?.speedMBps.toFixed(2) || 0} MB/s • ETA:{" "}
-                    {speedInfo[file.name]?.timeRemaining || "--:--"}
+                    Speed: {speedInfo[file.name]?.speedMBps.toFixed(2) || "0.00"} MB/s &nbsp;•&nbsp; ETA: {speedInfo[file.name]?.timeRemaining || "--:--"}
                   </p>
                 </div>
               </div>
